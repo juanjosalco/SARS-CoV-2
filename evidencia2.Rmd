@@ -1,0 +1,284 @@
+---
+title: "Evidencia 2"
+author: "Mariana Bustos Hernández, Mariana Esquivel Hernández, Juan José Salazar Cortés"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+PARTE 2 - Código
+1. Opción elegida:
+Analizar las secuencias de SARS-CoV-2 reportadas en los 20 países con más casos reportados. Y puedes tratar de responder a la pregunta: ¿Son muy diferentes las variantes entre cada país? ¿Es diferente el SARS-CoV-2 entre las diferentes poblaciones: Asiática, Hispana, Europea o Africana?
+
+```{r}
+#Cargar librerias necesarias
+
+library(ape)
+library(phytools)
+library(Biostrings)
+library(seqinr)
+library(adegenet)
+library(ggtree)
+library(DECIPHER)
+library(viridis)
+library(ggplot2)
+library(ggthemes)
+library(RColorBrewer)
+library(ggpubr)
+```
+```{r}
+#Códigos de acceso de los virus
+virus <- c("MW453103.1","ON248600.1", "MZ169911.1", "ON365977.1","ON003597.1", "OM294022.1", "ON380441.1", "OM692350.1","OL989066.1", "MW340907.1", "OL989058.1", "MT192772.1", "OL989073.1", "OM758316.1", "ON376063.1", "MZ359830.1", "MT470219.1", "OL869974.1", "MZ416737.1","ON148330.1")
+
+#Obtenemos las secuencias de los virus
+virus_sequences <- read.GenBank(virus)
+
+attr(virus_sequences, "species")
+
+```
+```{r}
+attr(virus_sequences, "description")
+```
+ 
+```{r}
+
+#Convertir las secuencias a Fasta
+write.dna(virus_sequences, file = "secuencias.fasta", format = "fasta", append = FALSE)
+
+virus_secuencias <- read.fasta("secuencias.fasta", seqtype = "DNA",  forceDNAtolower = FALSE)
+
+
+#Verficar si las secuencias poseen n
+paises <- c("USA", "IND", "BRA", "FRA", "DEU", "GBR", "RUS","KOR","ITA", "TUR", "ESP", "VNM", "ARG", "NLD", "JPN", "IRN", "COL", "AUS", "POL", "MEX")
+counter = 1
+for (i in virus_secuencias){
+  ifn = "n" %in% i
+  print(ifn)
+  if (ifn == TRUE){
+    print(paises[counter])
+  }
+   counter = counter + 1
+}
+
+
+#Quitar "n" de las secuencias
+
+virus_secuencias[[4]] <- virus_secuencias[[4]][!virus_secuencias[[4]] %in% c("n")]
+"n" %in% virus_secuencias[[4]]
+virus_secuencias[[10]] <- virus_secuencias[[10]] [!virus_secuencias[[10]] %in% c("n")]
+"n" %in% virus_secuencias[[10]]
+virus_secuencias[[13]] <- virus_secuencias[[13]] [!virus_secuencias[[13]] %in% c("n")]
+"n" %in% virus_secuencias[[13]]
+virus_secuencias[[14]] <- virus_secuencias[[14]] [!virus_secuencias[[14]] %in% c("n")]
+"n" %in% virus_secuencias[[13]]
+virus_secuencias[[18]] <- virus_secuencias[[18]] [!virus_secuencias[[18]] %in% c("n")]
+"n" %in% virus_secuencias[[18]]
+
+
+```
+```{r}
+#Verficar si las secuencias poseen espacios vacíos
+paises <- c("USA", "IND", "BRA", "FRA", "DEU", "GBR", "RUS","KOR","ITA", "TUR", "ESP", "VNM", "ARG", "NLD", "JPN", "IRN", "COL", "AUS", "POL", "MEX")
+counter = 1
+for (i in virus_secuencias){
+  ifn = " " %in% i
+  print(ifn)
+  if (ifn == TRUE){
+    print(paises[counter])
+  }
+   counter = counter + 1
+}
+
+#Quitar espacios vacíos
+
+for (i in 1:length(paises)){
+  virus_secuencias[[i]] <- virus_secuencias[[i]][!virus_secuencias[[i]] %in% c(" ")]
+  print(" " %in% virus_secuencias[[i]])
+}
+
+```
+2.Calcula la longitud de las secuencias que incluyas.
+```{r}
+#Vector países
+paises <- c("USA", "IND", "BRA", "FRA", "DEU", "GBR", "RUS","KOR","ITA", "TUR", "ESP", "VNM", "ARG", "NLD", "JPN", "IRN", "COL", "AUS", "POL", "MEX")
+
+for (i in 1:length(virus_secuencias)){
+  print(paises[i])
+  print(attr(virus_sequences,"description")[i])
+  print(length(virus_secuencias[[i]]))
+  cat("\n")
+  
+}
+```
+
+3.Crea una sola gráfica donde se comparen el número de bases de ADN que componen todas las variantes del virus.
+
+```{r fig.width=15, fig.height=30}
+#Se crearan cuetro graficas que luego se van a unir en unsa sola, una de cada base
+
+paises <- c("USA", "IND", "BRA", "FRA", "DEU", "GBR", "RUS","KOR","ITA", "TUR", "ESP", "VNM", "ARG", "NLD", "JPN", "IRN", "COL", "AUS", "POL", "MEX")
+
+#Bases por secuencia país
+numA <- c()
+numT <- c()
+numG <- c()
+numC <- c()
+
+for (i in 1:20){
+  bases = count(virus_secuencias[[i]],1)
+  numA <- c(numA,bases["a"])
+  numT <- c(numT,bases["t"])
+  numG <- c(numG,bases["g"])
+  numC <- c(numC,bases["c"])
+}
+
+cantidadB = length(numA) + length(numT) + length(numC) + length(numG)
+
+Family_colors <- c(
+"#edb34c", 
+"#9df74f",
+"#53d7e0",
+"#974ff7",
+"#f0735e",
+"#eda76b",
+"#f7e36f",
+"#90e071",
+"#6ff7d7",
+"#a3baf0",
+"#74d5ed",
+"#618bfa",
+"#9579e0",
+"#e079f7",
+"#f0759e",
+"#b95fed",
+"#fa4bb5",
+"#e07665",
+"#f7a563",
+"#f0c35b"
+)
+
+#Data frame para Adenina
+
+dtf_A <- data.frame(base= rep("A",times = 20), paises = paises ,tots = numA )
+
+#Plot Adenina
+
+A <- ggplot(data = dtf_A, aes(x = numA, y = paises, fill = paises)) + geom_bar(stat = "identity")  +  geom_text(aes(label = tots), colour = "blue4",  size = 2.65, vjust = 0, nudge_x = 120) + ggtitle("Cantidad de Adenina por variante") + labs( x = "Total de adenina ",fill = "tots") + scale_fill_manual(values = Family_colors ) + theme_update() +  xlim(0, 10000)
+
+#Data frame para Timina
+
+dtf_T <- data.frame(base= rep("T",times = 20), paises = paises ,tots = numT )
+
+#Plot Timina
+
+t <- ggplot(data = dtf_T, aes(x = tots, y = paises, fill = paises)) + geom_bar(stat = "identity") + ggtitle("Cantidad de Timina por variante") + labs( x = "Total de Timina ", y = " Paises",fill = "tots") + theme_update() +  scale_fill_manual(values = Family_colors )  +  geom_text(aes(label = tots), colour = "blue4",  size = 2.65, vjust = 0, nudge_x = 120) +  xlim(0, 10000)
+
+
+#Data frame para Guanina
+
+dtf_G <- data.frame(base= rep("G",times = 20), paises = paises, tots = numG )
+
+#Plot Guanina
+
+G <- ggplot(data = dtf_G, aes(x = numG, y = paises, fill = paises)) + geom_bar(stat = "identity") + ggtitle("Cantidad de Guania por variante") + labs( x = "Total de Guanina ", y = " Paises",fill = "tots") + theme_update() + scale_fill_manual(values = Family_colors )  +  geom_text(aes(label = tots), colour = "blue4",  size = 2.65, vjust = 0, nudge_x = 120) +  xlim(0, 10000)
+
+#Data frame para Citosina
+
+dtf_C <- data.frame(base= rep("C",times = 20), paises = paises ,tots = numC )
+
+#Plot Citosina
+
+C <- ggplot(data = dtf_C, aes(x = numC, y = paises, fill = paises)) + geom_bar(stat = "identity") + ggtitle("Cantidad de Citosina por variante") + labs( x = "Total de Citosina ", y = " Paises",fill = "tots") + theme_update() + scale_fill_manual(values = Family_colors )  +  geom_text(aes(label = tots), colour = "blue4",  size = 2.65, vjust = 0, nudge_x = 120)  +  xlim(0, 10000)
+
+```
+
+```{r fig.width=15, fig.height=22}
+#Plot final
+grafica <- ggarrange(A, C, G , t, 
+           ncol = 1, nrow = 4,  padding = 3 ) #+rremove("x.text")
+ 
+grafica
+```
+
+-Interpretación escrita
+
+4.Agrega un análisis jerárquico global obtenido de las secuencias que se seleccionaron para estudiar.
+
+```{r}
+#ALINEMIENTO
+#Cargamos las secuencias 
+library("seqinr")
+library("ape")
+library("Biostrings")
+
+virus_seq_not_align <-readDNAStringSet("secuencias.fasta", format = "fasta")
+virus_seq_not_align
+```
+
+
+```{r}
+#Correr el alineamiento multiple 
+library(DECIPHER)
+virus_seq_not_align <- OrientNucleotides(virus_seq_not_align)
+
+virus_seq_align <- AlignSeqs(virus_seq_not_align)
+```
+```{r}
+#Visualizar el resultado del alineamiento
+BrowseSeqs(virus_seq_align, highlight=0)
+```
+
+```{r}
+#Guardamos el resultado
+writeXStringSet(virus_seq_align, file="virus_seq_align.fasta")
+
+#Obtener el archivo
+virus_aligned <- read.alignment("virus_seq_align.fasta", format = "fasta")
+
+#Creamos una matriz de distancia
+matriz_distancia <- dist.alignment(virus_aligned, matrix = "similarity")
+
+# Visualiza la matriz de distancia: donde sombras más oscuras de gris significan una mayor distancia.
+temp <- as.data.frame(as.matrix(matriz_distancia))
+table.paint(temp, cleg=0, clabel.row=.5, clabel.col=.5) + scale_color_viridis()
+```
+```{r}
+#Creación del árbol
+virus_tree <- nj(matriz_distancia)
+class(virus_tree) 
+virus_tree <- ladderize(virus_tree)
+```
+```{r fig.width= 14}
+#Plot utilizando ggtree  del árbol filogenético
+
+nodos <- c(2,1,9,14,17,11,6,19,16,12,8,7,10,5,13,3,20,18,15,4)
+paises <- c( "IND","USA", "ITA", "NLD", "COL", "ESP",  "GBR", "POL",   "IRN", "VNM",  "KOR", "RUS", "TUR","DEU",  "ARG", "BRA", "MEX","AUS", "JPN", "FRA")
+
+
+ggtree(virus_tree,branch.length="none")   + geom_tiplab() + geom_cladelab(node=nodos[1], label=paises[1], align=TRUE, angle=0, hjust='center', offset.text=.5, barsize=0.5, fontsize=2)  + geom_cladelab(node=nodos[2], label=paises[2], align=TRUE, angle=0, hjust='center', offset.text=.5, barsize=0.5, fontsize=2)  +geom_cladelab(node=nodos[3], label=paises[3], align=TRUE, angle=0, hjust='center', offset.text=.5, barsize=0.5, fontsize=2) +geom_cladelab(node=nodos[4], label=paises[4], align=TRUE, angle=0, hjust='center', offset.text=.5, barsize=0.5, fontsize=2) +geom_cladelab(node=nodos[5], label=paises[5], align=TRUE, angle=0, hjust='center', offset.text=.5, barsize=0.5, fontsize=2) + geom_cladelab(node=nodos[6], label=paises[6], align=TRUE, angle=0, hjust='center', offset.text=.5, barsize=0.5, fontsize=2) + geom_cladelab(node=nodos[7], label=paises[7], align=TRUE, angle=0, hjust='center', offset.text=.5, barsize=0.5, fontsize=2) + geom_cladelab(node=nodos[8], label=paises[8], align=TRUE, angle=0, hjust='center', offset.text=.5, barsize=0.5, fontsize=2) +geom_cladelab(node=nodos[9], label=paises[9], align=TRUE, angle=0, hjust='center', offset.text=.5, barsize=0.5, fontsize=2) +geom_cladelab(node=nodos[10], label=paises[10], align=TRUE, angle=0, hjust='center', offset.text=.5, barsize=0.5, fontsize=2)  + geom_cladelab(node=nodos[11], label=paises[11], align=TRUE, angle=0, hjust='center', offset.text=.5, barsize=0.5, fontsize=2)  + geom_cladelab(node=nodos[12], label=paises[12], align=TRUE, angle=0, hjust='center', offset.text=.5, barsize=0.5, fontsize=2)  +geom_cladelab(node=nodos[13], label=paises[13], align=TRUE, angle=0, hjust='center', offset.text=.5, barsize=0.5, fontsize=2) +geom_cladelab(node=nodos[14], label=paises[14], align=TRUE, angle=0, hjust='center', offset.text=.5, barsize=0.5, fontsize=2) +geom_cladelab(node=nodos[15], label=paises[15], align=TRUE, angle=0, hjust='center', offset.text=.5, barsize=0.5, fontsize=2) + geom_cladelab(node=nodos[16], label=paises[16], align=TRUE, angle=0, hjust='center', offset.text=.5, barsize=0.5, fontsize=2) + geom_cladelab(node=nodos[17], label=paises[17], align=TRUE, angle=0, hjust='center', offset.text=.5, barsize=0.5, fontsize=2) + geom_cladelab(node=nodos[18], label=paises[18], align=TRUE, angle=0, hjust='center', offset.text=.5, barsize=0.5, fontsize=2) +geom_cladelab(node=nodos[19], label=paises[19], align=TRUE, angle=0, hjust='center', offset.text=.5, barsize=0.5, fontsize=2) +geom_cladelab(node=nodos[20], label=paises[20], align=TRUE, angle=0, hjust='center', offset.text=.5, barsize=0.5, fontsize=2) + ggtitle("SARS-CoV-2 reportadas en los 20 países con más casos reportados")
+
+
+```
+
+
+
+```{r}
+#Visualización del alineamiento de las secuencias
+library(ggmsa)
+ggmsa(virus_seq_not_align, 320, 360, color = "Chemistry_AA")
+```
+```{r fig.width=10, fig.height=15}
+#Combinación del árbol filogenético con el alineamiento de las secuencias
+
+plot_virus <- ggtree(virus_tree ) + geom_tiplab()
+
+data = tidy_msa(virus_seq_not_align, 164, 213)
+plot_virus + geom_facet(geom = geom_msa, data = data,  panel = 'msa', color = "Chemistry_AA") +
+    xlim_tree(1)
+
+```
+Interpretaciones 
+
+
+Conclusiones
